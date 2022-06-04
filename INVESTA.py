@@ -378,7 +378,8 @@ async def cur_callback(callback_query: types.CallbackQuery):
 
 		except Exception as err:
 			print(f"{user_id} caused an error in [/rub]: {err}")
-
+			
+			await bot.answer_callback_query(callback_query.id, "Ошибка")
 			await bot.send_message(user_id,
 				"Произошла ошибка. Пожалуйста, повторите запрос позже.")
 
@@ -410,7 +411,8 @@ async def cur_callback(callback_query: types.CallbackQuery):
 
 		except Exception as err:
 			print(f"{user_id} caused an error in [/usd]: {err}")
-
+			
+			await bot.answer_callback_query(callback_query.id, "Ошибка")
 			await bot.send_message(user_id,
 				"Произошла ошибка. Пожалуйста, повторите запрос позже.")
 
@@ -482,6 +484,7 @@ async def cur_callback(callback_query: types.CallbackQuery):
 							else:
 								briefly_text += emoji.emojize(":green_circle:") + f"  {stock}  {qntty}  {edit_user_price}  {edit_live_price}  \n" + emoji.emojize(":up_arrow: ") + f"{change_per_day} — change per day\n" + emoji.emojize(":up_arrow: ") + f"{change_per_time} — change per time\n\n"
 
+				await bot.answer_callback_query(callback_query.id, "Готово")
 				await bot.send_message(user_id,
 					briefly_text +
 					"========================\n" +
@@ -491,7 +494,8 @@ async def cur_callback(callback_query: types.CallbackQuery):
 
 		except Exception as err:
 			print(f"{user_id} caused an error in [/profit]: {err}")
-
+			
+			await bot.answer_callback_query(callback_query.id, "Ошибка")
 			await bot.send_message(user_id,
 				"Произошла ошибка. Пожалуйста, повторите запрос позже.")
 
@@ -561,7 +565,8 @@ async def cur_callback(callback_query: types.CallbackQuery):
 							
 							else:
 								expanded_text += emoji.emojize(":green_circle:") + f"   {stock}\nquantity: {qntty}\nentry price: {float(edit_user_price)}\ncurrent price: {float(live_price)}\nprice change per day: " + emoji.emojize(":up_arrow: ") + f"{change_per_day}\nprice change per time: " + emoji.emojize(":up_arrow: ") + f"{change_per_time}\n\n"
-
+				
+				await bot.answer_callback_query(callback_query.id, "Готово")
 				await bot.send_message(user_id,
 					expanded_text +
 					"========================\n" +
@@ -571,7 +576,8 @@ async def cur_callback(callback_query: types.CallbackQuery):
 
 		except Exception as err:
 			print(f"{user_id} caused an error in [/profit]: {err}")
-
+			
+			await bot.answer_callback_query(callback_query.id, "Ошибка")
 			await bot.send_message(user_id,
 				"Произошла ошибка. Пожалуйста, повторите запрос позже.")
 
