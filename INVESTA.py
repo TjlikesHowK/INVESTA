@@ -39,6 +39,62 @@ sta_kb = InlineKeyboardMarkup(resize_keyboard = True).add(
 stop_kb = ReplyKeyboardMarkup(resize_keyboard = True).add(
 	btn_stop)
 
+token = "2034540352:AAHBga23bcTZdfrHypyCl-g9g4zk77fn7Vk"
+
+curChanger = {
+	"HHR": "USD",
+	"MBT": "USD",
+	"OZON": "RUB",
+	"QIWI": "RUB",
+	"YNDX": "RUB"}
+
+add_t = [
+	emoji.emojize(":check_mark_button:") + " Купить",
+	"Купить",
+	"/add"]
+
+del_t = [
+	emoji.emojize(":cross_mark:") + " Продать",
+	"Продать",
+	"/del"]
+
+cur_t = [
+	emoji.emojize(":currency_exchange:") + " Валюта",
+	"Валюта",
+	"/cur"]
+
+sta_t = [
+	emoji.emojize(":money_bag:") + " Профит",
+	"Профит",
+	"/sta"]
+
+ptf_t = [
+	emoji.emojize(":briefcase:") + " Портфель",
+	"Портфель",
+	"/ptf"]
+
+stop_t = [
+	"Стоп",
+	"/stop"]
+
+Log = set()
+Users = set()
+loop = asyncio.get_event_loop()
+bot = Bot(token = token)
+dp = Dispatcher(bot, loop = loop)
+c = cc();
+
+with open("Users.txt", "r", encoding = "utf-8") as f:
+	for line in f:
+		line = line.strip()
+		user_id, currency = line.split()
+
+		log = [user_id, currency, "none"]
+
+		if not(str(user_id) in Users):
+			Users.add(log[0])
+			Log.add(str(log))
+
 async def adding(user_id, item):
 	try:
 		tick, e_price, qntty = item.split()
@@ -115,61 +171,68 @@ async def deleting(user_id, item):
 			await bot.send_message(user_id, text =
 				"Произошла ошибка. Пожалуйста, повторите запрос позже.", reply_markup = main_kb)
 
-token = "2034540352:AAHBga23bcTZdfrHypyCl-g9g4zk77fn7Vk"
+async def USDRUB(user_id, cur):
+	global Users, Log
 
-curChanger = {
-	"HHR": "USD",
-	"MBT": "USD",
-	"OZON": "RUB",
-	"QIWI": "RUB",
-	"YNDX": "RUB"}
+	txt = ""
+	past_cur = "RUB"
 
-add_t = [
-	emoji.emojize(":check_mark_button:") + " Купить",
-	"Купить",
-	"/add"]
+	if(cur == "RUB"):
+		past_cur = "USD"
 
-del_t = [
-	emoji.emojize(":cross_mark:") + " Продать",
-	"Продать",
-	"/del"]
+	with open("Users.txt", "r") as f:
+		for line in f:
+			if(f"{user_id} {past_cur}" in line):
+				txt += f"{user_id} {cur}\n"
 
-cur_t = [
-	emoji.emojize(":currency_exchange:") + " Валюта",
-	"Валюта",
-	"/cur"]
+				log = [str(user_id), {cur}, "none"]
+				Log.remove(f"['{user_id}', '{past_cur}', 'none']")
+				Log.add(str(log))
 
-sta_t = [
-	emoji.emojize(":money_bag:") + " Профит",
-	"Профит",
-	"/sta"]
+			else:
+				txt += line
 
-ptf_t = [
-	emoji.emojize(":briefcase:") + " Портфель",
-	"Портфель",
-	"/ptf"]
+	with open("Users.txt", "w") as f:
+		f.write(txt)
 
-stop_t = [
-	"Стоп",
-	"/stop"]
+	del txt, past_cur
 
-Log = set()
-Users = set()
-loop = asyncio.get_event_loop()
-bot = Bot(token = token)
-dp = Dispatcher(bot, loop = loop)
-c = cc();
+async def profitAcc(portfolio, line, chosen_cur):
+	user_id, stock, user_price, qntty = line.split()
+	live_price, change_per_day, stock_cur = ps.driver(stock)
 
-with open("Users.txt", "r", encoding = "utf-8") as f:
-	for line in f:
-		line = line.strip()
-		user_id, currency = line.split()
+	edit_user_price = user_price
+	edit_live_price = live_price
 
-		log = [user_id, currency, "none"]
+	if stock_cur != chosen_cur or stock in curChanger:
+		user_price = round(c.convert(user_price, stock_cur, chosen_cur), 2)
 
-		if not(str(user_id) in Users):
-			Users.add(log[0])
-			Log.add(str(log))
+		if stock in curChanger:
+			live_price = round(c.convert(live_price, stock_cur, curChanger[stock]), 2)
+
+			edit_user_price = user_price
+			edit_live_price = live_price
+
+		else: 
+			live_price = round(c.convert(live_price, stock_cur, chosen_cur), 2)
+
+	if stock in curChanger:
+		live_price = round(c.convert(live_price, curChanger[stock], chosen_cur), 2)
+		user_price = round(c.convert(user_price, curChanger[stock], chosen_cur), 2)
+
+		portfolio += round(round(float(live_price) - float(user_price), 2) * float(qntty), 2)
+
+	else:
+		portfolio += round(round(float(live_price) - float(user_price), 2) * float(qntty), 2)
+
+	d1 = round(float(edit_live_price) - float(edit_user_price), 2)
+	d2 = round(((float(edit_live_price) * 100) / float(edit_user_price)) - 100, 2)
+
+	change_per_time = f"{d1}({d2}%)".replace("e-", "+").replace("-", "−").replace("+", "e-")
+
+	del user_id, user_price, stock_cur, live_price
+
+	return change_per_day, change_per_time, stock, qntty, edit_user_price, edit_live_price
 
 @dp.message_handler(commands = ['start', 'call', 'info'])
 async def start_command(msg: types.Message):
@@ -340,83 +403,46 @@ async def start_command(msg: types.Message):
 		except Exception as err:
 			print(f"{msg.from_user.id} caused an error in [/sta]: {err}")
 
-			bot.send_message(msg.from_user.id, text =
+			await bot.send_message(msg.from_user.id, text =
 				"Произошла ошибка. Пожалуйста, повторите запрос позже.", reply_markup = main_kb)
 
 @dp.callback_query_handler(lambda c: c.data)
 async def cur_callback(callback_query: types.CallbackQuery):
 	global Users, Log
 
-	code = callback_query.data
 	user_id = str(callback_query.from_user.id)
 
-	if(code == "rub"):
-		print(f"{user_id} used [/cur] - usd")
+	if(callback_query.data == "rub"):
+		print(f"{user_id} used [/cur] - rub")
 
 		try:
-			txt = ""
-
-			with open("Users.txt", "r") as f:
-				for line in f:
-					if(f"{user_id} USD" in line):
-						txt += f"{user_id} RUB\n"
-
-						log = [str(user_id), "RUB", "none"]
-						Log.remove(f"['{user_id}', 'USD', 'none']")
-						Log.add(str(log))
-
-					else:
-						txt += line
-
-			with open("Users.txt", "w") as f:
-				f.write(txt)
-
-			del txt
+			await USDRUB(user_id, "RUB")
 
 			await bot.answer_callback_query(callback_query.id, "Ваша расчётная валюта была успешно изменена на RUB")
 			await bot.send_message(user_id, "Ваша расчётная валюта была успешно изменена на RUB")
 
 		except Exception as err:
 			print(f"{user_id} caused an error in [/rub]: {err}")
-			
-			await bot.answer_callback_query(callback_query.id, "Ошибка")
+
 			await bot.send_message(user_id,
 				"Произошла ошибка. Пожалуйста, повторите запрос позже.")
 
-	elif(code == "usd"):
+	elif(callback_query.data == "usd"):
 		print(f"{user_id} used [/cur] - usd")
 
 		try:
-			txt = ""
-
-			with open("Users.txt", "r") as f:
-				for line in f:
-					if(f"{user_id} RUB" in line):
-						txt += f"{user_id} USD\n"
-
-						log = [str(user_id), "USD", "none"]
-						Log.remove(f"['{user_id}', 'RUB', 'none']")
-						Log.add(str(log))
-
-					else:
-						txt += line
-
-			with open("Users.txt", "w") as f:
-				f.write(txt)
-
-			del txt
+			await USDRUB(user_id, "USD")
 
 			await bot.answer_callback_query(callback_query.id, "Ваша расчётная валюта была успешно изменена на USD")
 			await bot.send_message(user_id, "Ваша расчётная валюта была успешно изменена на USD")
 
 		except Exception as err:
 			print(f"{user_id} caused an error in [/usd]: {err}")
-			
-			await bot.answer_callback_query(callback_query.id, "Ошибка")
+
 			await bot.send_message(user_id,
 				"Произошла ошибка. Пожалуйста, повторите запрос позже.")
 
-	elif(code == "briefly"):
+	elif(callback_query.data == "briefly"):
 		print(f"{user_id} used [/profit] - briefly")
 
 		try:
@@ -439,37 +465,7 @@ async def cur_callback(callback_query: types.CallbackQuery):
 
 				for line in f:
 					if(user_id in line):
-						user_id, stock, user_price, qntty = line.split()
-						live_price, change_per_day, stock_cur = ps.driver(stock)
-
-						edit_user_price = user_price
-						edit_live_price = live_price
-
-						if stock_cur != chosen_cur or stock in curChanger:
-							user_price = round(c.convert(user_price, stock_cur, chosen_cur), 2)
-
-							if stock in curChanger:
-								live_price = round(c.convert(live_price, stock_cur, curChanger[stock]), 2)
-
-								edit_user_price = user_price
-								edit_live_price = live_price
-
-							else: 
-								live_price = round(c.convert(live_price, stock_cur, chosen_cur), 2)
-
-						if stock in curChanger:
-							live_price = round(c.convert(live_price, curChanger[stock], chosen_cur), 2)
-							user_price = round(c.convert(user_price, curChanger[stock], chosen_cur), 2)
-
-							portfolio += round(round(float(live_price) - float(user_price), 2) * float(qntty), 2)
-
-						else:
-							portfolio += round(round(float(live_price) - float(user_price), 2) * float(qntty), 2)
-
-						d1 = round(float(edit_live_price) - float(edit_user_price), 10)
-						d2 = round(((float(edit_live_price) * 100) / float(edit_user_price)) - 100, 10)
-
-						change_per_time = f"{d1}({d2}%)".replace("e-", "+").replace("-", "−").replace("+", "e-")
+						change_per_day, change_per_time, stock, qntty, edit_user_price, edit_live_price = await profitAcc(portfolio, line, chosen_cur)
 
 						if("−" in str(change_per_day)):
 							if("−" in str(change_per_time)):
@@ -484,7 +480,6 @@ async def cur_callback(callback_query: types.CallbackQuery):
 							else:
 								briefly_text += emoji.emojize(":green_circle:") + f"  {stock}  {qntty}  {edit_user_price}  {edit_live_price}  \n" + emoji.emojize(":up_arrow: ") + f"{change_per_day} — change per day\n" + emoji.emojize(":up_arrow: ") + f"{change_per_time} — change per time\n\n"
 
-				await bot.answer_callback_query(callback_query.id, "Готово")
 				await bot.send_message(user_id,
 					briefly_text +
 					"========================\n" +
@@ -494,12 +489,11 @@ async def cur_callback(callback_query: types.CallbackQuery):
 
 		except Exception as err:
 			print(f"{user_id} caused an error in [/profit]: {err}")
-			
-			await bot.answer_callback_query(callback_query.id, "Ошибка")
+
 			await bot.send_message(user_id,
 				"Произошла ошибка. Пожалуйста, повторите запрос позже.")
 
-	elif(code == "expanded"):
+	elif(callback_query.data == "expanded"):
 		print(f"{user_id} used [/profit] - expanded")
 
 		try:
@@ -521,52 +515,21 @@ async def cur_callback(callback_query: types.CallbackQuery):
 
 				for line in f:
 					if(user_id in line):
-						user_id, stock, user_price, qntty = line.split()
-						live_price, change_per_day, stock_cur = ps.driver(stock)
-
-						edit_user_price = user_price
-						edit_live_price = live_price
-
-						if stock_cur != chosen_cur or stock in curChanger:
-							user_price = round(c.convert(user_price, stock_cur, chosen_cur), 2)
-
-							if stock in curChanger:
-								live_price = round(c.convert(live_price, stock_cur, curChanger[stock]), 2)
-
-								edit_user_price = user_price
-								edit_live_price = live_price
-							
-							else: 
-								live_price = round(c.convert(live_price, stock_cur, chosen_cur), 2)
-
-						if stock in curChanger:
-							live_price = round(c.convert(live_price, curChanger[stock], chosen_cur), 2)
-							user_price = round(c.convert(user_price, curChanger[stock], chosen_cur), 2)
-
-							portfolio += round(round(float(live_price) - float(user_price), 2) * float(qntty), 2)
-						
-						else:
-							portfolio += round(round(float(live_price) - float(user_price), 2) * float(qntty), 2)
-
-						d1 = round(float(edit_live_price) - float(edit_user_price), 10)
-						d2 = round(((float(edit_live_price) * 100) / float(edit_user_price)) - 100, 10)
-
-						change_per_time = f"{d1}({d2}%)".replace("e-", "+").replace("-", "−").replace("+", "e-")
+						change_per_day, change_per_time, stock, qntty, edit_user_price, edit_live_price = await profitAcc(portfolio, line, chosen_cur)
 
 						if("−" in str(change_per_day)):
 							if("−" in str(change_per_time)):
-								expanded_text += emoji.emojize(":red_circle:") + f"   {stock}\nquantity: {qntty}\nentry price: {float(edit_user_price)}\ncurrent price: {float(live_price)}\nprice change per day: " + emoji.emojize(":down_arrow: ") + f"{change_per_day}\nprice change per time: " + emoji.emojize(":down_arrow: ") + f"{change_per_time}\n\n"
+								expanded_text += emoji.emojize(":red_circle:") + f"   {stock}\nquantity: {qntty}\nentry price: {float(edit_user_price)}\ncurrent price: {float(edit_live_price)}\nprice change per day: " + emoji.emojize(":down_arrow: ") + f"{change_per_day}\nprice change per time: " + emoji.emojize(":down_arrow: ") + f"{change_per_time}\n\n"
 							
 							else:
-								expanded_text += emoji.emojize(":green_circle:") + f"   {stock}\nquantity: {qntty}\nentry price: {float(edit_user_price)}\ncurrent price: {float(live_price)}\nprice change per day: " + emoji.emojize(":down_arrow: ") + f"{change_per_day}\nprice change per time: " + emoji.emojize(":up_arrow: ") + f"{change_per_time}\n\n"
+								expanded_text += emoji.emojize(":green_circle:") + f"   {stock}\nquantity: {qntty}\nentry price: {float(edit_user_price)}\ncurrent price: {float(edit_live_price)}\nprice change per day: " + emoji.emojize(":down_arrow: ") + f"{change_per_day}\nprice change per time: " + emoji.emojize(":up_arrow: ") + f"{change_per_time}\n\n"
 						else:
 							if("−" in str(change_per_time)):
-								expanded_text += emoji.emojize(":red_circle:") + f"   {stock}\nquantity: {qntty}\nentry price: {float(edit_user_price)}\ncurrent price: {float(live_price)}\nprice change per day: " + emoji.emojize(":up_arrow: ") + f"{change_per_day}\nprice change per time: " + emoji.emojize(":down_arrow: ") + f"{change_per_time}\n\n"
+								expanded_text += emoji.emojize(":red_circle:") + f"   {stock}\nquantity: {qntty}\nentry price: {float(edit_user_price)}\ncurrent price: {float(edit_live_price)}\nprice change per day: " + emoji.emojize(":up_arrow: ") + f"{change_per_day}\nprice change per time: " + emoji.emojize(":down_arrow: ") + f"{change_per_time}\n\n"
 							
 							else:
-								expanded_text += emoji.emojize(":green_circle:") + f"   {stock}\nquantity: {qntty}\nentry price: {float(edit_user_price)}\ncurrent price: {float(live_price)}\nprice change per day: " + emoji.emojize(":up_arrow: ") + f"{change_per_day}\nprice change per time: " + emoji.emojize(":up_arrow: ") + f"{change_per_time}\n\n"
-				
-				await bot.answer_callback_query(callback_query.id, "Готово")
+								expanded_text += emoji.emojize(":green_circle:") + f"   {stock}\nquantity: {qntty}\nentry price: {float(edit_user_price)}\ncurrent price: {float(edit_live_price)}\nprice change per day: " + emoji.emojize(":up_arrow: ") + f"{change_per_day}\nprice change per time: " + emoji.emojize(":up_arrow: ") + f"{change_per_time}\n\n"
+
 				await bot.send_message(user_id,
 					expanded_text +
 					"========================\n" +
@@ -576,8 +539,7 @@ async def cur_callback(callback_query: types.CallbackQuery):
 
 		except Exception as err:
 			print(f"{user_id} caused an error in [/profit]: {err}")
-			
-			await bot.answer_callback_query(callback_query.id, "Ошибка")
+
 			await bot.send_message(user_id,
 				"Произошла ошибка. Пожалуйста, повторите запрос позже.")
 
