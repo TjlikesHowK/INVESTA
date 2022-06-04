@@ -447,7 +447,8 @@ async def cur_callback(callback_query: types.CallbackQuery):
 
 		try:
 			portfolio = 0
-
+			
+			await bot.answer_callback_query(callback_query.id, "Идёт подсчёт...")
 			await bot.send_message(user_id,
 				emoji.emojize(":hourglass_done:") + " Пожалуйста, подождите...")
 
@@ -498,7 +499,8 @@ async def cur_callback(callback_query: types.CallbackQuery):
 
 		try:
 			portfolio = 0
-
+			
+			await bot.answer_callback_query(callback_query.id, "Идёт подсчёт...")
 			await bot.send_message(user_id,
 				emoji.emojize(":hourglass_done:") + " Пожалуйста, подождите...")
 
