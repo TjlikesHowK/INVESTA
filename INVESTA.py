@@ -39,7 +39,7 @@ sta_kb = InlineKeyboardMarkup(resize_keyboard = True).add(
 stop_kb = ReplyKeyboardMarkup(resize_keyboard = True).add(
 	btn_stop)
 
-token = "2034540352:AAHBga23bcTZdfrHypyCl-g9g4zk77fn7Vk"
+token = "token"
 
 curChanger = {
 	"HHR": "USD",
